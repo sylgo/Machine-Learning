@@ -1,0 +1,95 @@
+# Machine Learning Project - Human Activity Recognition
+Silviu Golumbeanu
+August 22nd, 2015
+
+## Overview 
+Using the data available at  http://groupware.les.inf.puc-rio.br/har for the Weight Lifting Execrcise we are predicting the manner in which they did the exercise. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways and the data was captured from accelerometers on the belt, forearm, arm, and dumbell of 6 participants.
+
+## Getting and Cleaning Data
+### Loading Data
+Loading the training and testing datasets:
+```{r}
+training_url <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testing_url <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+training_raw <- read.csv(url(training_url), na.strings=c("NA","#DIV/0!",""))
+testing_raw <- read.csv(url(testing_url), na.strings=c("NA","#DIV/0!",""))
+dim(training_raw)
+```
+Loading libraries:
+```{r}
+library(caret)
+library(rpart)
+library(randomForest)
+```
+### Cleaning the Data
+Determing the variables that would be the best predictore. We are selecting the variables for belt, arm, dumbbell, and forearm that do not have all NA values.
+```{r}
+NAs <- sapply(training_raw, function (x) any(is.na(x) | x == ""))
+is_predictor <- !NAs & grepl("belt|[^(fore)]arm|dumbbell|forearm", names(NAs))
+predictors <- names(NAs)[is_predictor]
+vars <- c("classe", predictors)
+training <- training_raw[, vars]
+dim(training)
+testing <- testing_raw[, predictors]
+dim(testing)
+```
+Making the "classe" variable a factor:
+```{r}
+training$classe <- as.factor(training$classe) 
+```
+### Partioning the Training Set
+We are splitting the Training data set into two data sets, 60% for training and 40% for testing:
+```{r}
+set.seed(12345)
+inTrain <- createDataPartition(y=training$classe, p=0.6, list=FALSE)
+myTraining <- training[inTrain, ]
+myTesting <- training[-inTrain, ]
+```
+
+## Model Building
+### Using ML algorithms and decision trees for prediction
+```{r}
+modFit1 <- rpart(classe ~ ., data=myTraining, method="class")
+```
+Prediction:
+```{r}
+predictions1 <- predict(modFit1, myTesting, type = "class")
+```
+Sample Error and Cross Validation:
+```{r}
+confusionMatrix(predictions1, myTesting$classe)
+```
+### Using Random Forests
+```{r}
+modFit2 <- randomForest(classe ~. , data=myTraining)
+```
+Prediction:
+```{r}
+predictions2 <- predict(modFit2, myTesting, type = "class")
+```
+Sample Error and Cross Validation:
+```{r}
+confusionMatrix(predictions2, myTesting$classe)
+```
+## Generate file for submission
+Use the Random Forests model on the provided test set:
+```{r}
+predictions3 <- predict(modFit2, testing, type = "class")
+```
+Generate the file for submission:
+```{r}
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(predictions3)
+```
+
+B2)
+```
+edictionsB2)
+```
